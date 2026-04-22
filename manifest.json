@@ -1,0 +1,15 @@
+{
+  "name": "AISA Compliance Tracker",
+  "short_name": "AISA Tracker",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#185FA5",
+  "icons": [
+    {
+      "src": "https://via.placeholder.com/192x192/185FA5/ffffff?text=AISA",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
