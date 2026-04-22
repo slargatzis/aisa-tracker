@@ -408,7 +408,7 @@ STUDENTS.forEach(s => { studentMap[s.num] = s; });
 let logs = {id:{},uniform:{},pouch:{}};
 let activeType = "id";
 let currentView = "log";
-let expGrades = ["6","7","8"];
+let expGrades = ["6","7","8","9","10","11","12"];
 let expTypes = ["id","uniform","pouch"];
 let currentMatch = null;
 let flashTimer = null;
@@ -593,8 +593,8 @@ function buildExpTypePills() {
 }
 
 function buildExpGradePills() {
-  document.getElementById("exp-grade-pills").innerHTML = ["6","7","8"].map(g=>
-    `<button class="pill-btn" onclick="toggleGrade('${g}')" style="border-color:${expGrades.includes(g)?gc(g):"#ddd"};background:${expGrades.includes(g)?gl(g):"transparent"};color:${expGrades.includes(g)?gc(g):"#888"};font-size:13px">Grade ${g}</button>`
+  document.getElementById("exp-grade-pills").innerHTML = GRADES.map(g=>
+    `<button class="pill-btn" onclick="toggleGrade('${g}')" style="border-color:${expGrades.includes(g)?gc(g):"#ddd"};background:${expGrades.includes(g)?gl(g):"transparent"};color:${expGrades.includes(g)?gc(g):"#888"};font-size:13px">G${g}</button>`
   ).join("");
 }
 
