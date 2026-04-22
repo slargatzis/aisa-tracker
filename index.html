@@ -1,708 +1,562 @@
-import { useState, useEffect, useRef } from "react";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="theme-color" content="#185FA5"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="AISA Tracker"/>
+<title>AISA Compliance Tracker</title>
+<link rel="manifest" href="manifest.json"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;min-height:100vh}
+#pin-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:2rem;background:#fff}
+#pin-screen h1{font-size:22px;font-weight:500;margin-bottom:6px}
+#pin-screen p{font-size:14px;color:#666;margin-bottom:2rem}
+#pin-input{font-size:28px;letter-spacing:8px;padding:12px 20px;border:2px solid #ddd;border-radius:12px;width:180px;text-align:center;outline:none;margin-bottom:12px}
+#pin-input:focus{border-color:#185FA5}
+#pin-error{color:#A32D2D;font-size:13px;margin-bottom:12px;min-height:18px}
+#pin-btn{padding:12px 32px;border-radius:10px;border:none;background:#185FA5;color:#fff;font-size:15px;font-weight:500;cursor:pointer}
+#app{display:none;max-width:680px;margin:0 auto;padding:1rem}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:0.5px solid #e5e5e0}
+.header-title{font-size:17px;font-weight:500}
+.header-sub{font-size:12px;color:#888;margin-top:2px}
+.nav{display:flex;gap:6px}
+.nav button{font-size:12px;padding:5px 12px;border-radius:99px;border:0.5px solid #ddd;background:transparent;color:#333;cursor:pointer;font-weight:400}
+.nav button.active{background:#f0f0eb;border-color:#aaa;font-weight:500}
+.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1.25rem}
+.summary-card{border-radius:8px;padding:0.75rem;text-align:center;border:0.5px solid #e5e5e0;background:#fff;cursor:pointer;border-top-width:3px}
+.summary-card .val{font-size:22px;font-weight:500;line-height:1.1}
+.summary-card .lbl{font-size:11px;color:#888;margin-top:4px}
+.summary-card .sub{font-size:10px;color:#aaa;margin-top:1px}
+.type-tabs{display:flex;gap:8px;margin-bottom:1rem}
+.type-tab{flex:1;padding:8px;border-radius:8px;border:1.5px solid #ddd;background:transparent;color:#888;cursor:pointer;font-size:13px;font-weight:400}
+.card{background:#fff;border:0.5px solid #e5e5e0;border-radius:12px;padding:1.25rem;margin-bottom:1rem}
+.section-label{font-size:12px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px}
+.input-row{display:flex;gap:8px}
+.input-row input{flex:1;font-size:18px;padding:10px 14px;border-radius:8px;border:2px solid #ddd;background:#fff;color:#1a1a1a;outline:none}
+.log-btn{padding:10px 22px;border-radius:8px;border:none;background:#ccc;color:#fff;font-size:14px;font-weight:500;cursor:not-allowed}
+.log-btn.active{cursor:pointer}
+.match-preview{margin-top:12px;padding:12px 16px;border-radius:8px;display:flex;align-items:center;justify-content:space-between}
+.counts-row{display:flex;gap:10px}
+.count-box{text-align:center}
+.count-box .n{font-size:16px;font-weight:500}
+.count-box .t{font-size:9px;color:#888}
+.flash{margin-top:10px;padding:8px 14px;border-radius:8px;background:#e8f5e9;border:0.5px solid #a5d6a7;font-size:13px;color:#2e7d32}
+.empty{padding:1.5rem;text-align:center;border:0.5px dashed #ddd;border-radius:12px;color:#bbb;font-size:13px}
+.log-list{display:flex;flex-direction:column;gap:6px}
+.log-item{background:#fff;border:0.5px solid #e5e5e0;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:12px}
+.grade-badge{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;flex-shrink:0}
+.item-id{font-size:15px;font-weight:500}
+.item-sub{font-size:12px;color:#888}
+.item-counts{display:flex;gap:8px;align-items:center}
+.rm-btn{width:28px;height:28px;border-radius:6px;border:0.5px solid #ddd;background:transparent;color:#aaa;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.history-day{margin-bottom:1.5rem}
+.history-day-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.history-day-title{font-size:13px;font-weight:500}
+.badge-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.badge{font-size:11px;padding:2px 8px;border-radius:99px;font-weight:500}
+.search-result-card{background:#fff;border:0.5px solid #e5e5e0;border-radius:12px;padding:1.25rem;margin-bottom:1rem}
+.type-counts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.type-count-box{border-radius:8px;padding:10px;text-align:center}
+.type-count-box .n{font-size:24px;font-weight:500;line-height:1}
+.type-count-box .l{font-size:11px;opacity:0.8;margin-top:3px}
+.history-entry{background:#fff;border:0.5px solid #e5e5e0;border-radius:8px;padding:9px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.type-pill{font-size:11px;padding:2px 10px;border-radius:99px;font-weight:500}
+.filter-label{font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px}
+.pill-btn{padding:5px 14px;border-radius:99px;font-size:12px;cursor:pointer;border:1.5px solid #ddd;background:transparent;color:#888}
+.date-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.date-grid label{font-size:11px;font-weight:500;color:#888;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.04em}
+.date-grid input{width:100%;font-size:13px;padding:7px 10px;border-radius:8px;border:0.5px solid #ddd;background:#fff;color:#1a1a1a}
+.dl-btn{padding:10px 20px;border-radius:8px;border:none;background:#185FA5;color:#fff;font-size:14px;font-weight:500;cursor:pointer}
+.dl-btn:disabled{background:#ddd;color:#aaa;cursor:not-allowed}
+.ytd-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ytd-box{text-align:center}
+.ytd-box .n{font-size:20px;font-weight:500}
+.ytd-box .l{font-size:11px;color:#888;margin-top:2px}
+.error-box{padding:1rem;border-radius:8px;background:#fdecea;border:0.5px solid #f5c6c6;color:#A32D2D;font-size:13px}
+.find-result{padding:12px 14px;border-radius:8px;background:#f5f5f0;border:0.5px solid #e5e5e0;margin-top:12px}
+input[type=date]{color-scheme:light}
+@media(max-width:480px){.nav button{font-size:11px;padding:4px 9px}.header-title{font-size:15px}}
+</style>
+</head>
+<body>
 
+<div id="pin-screen">
+  <h1>AISA Compliance Tracker</h1>
+  <p>Enter your PIN to continue</p>
+  <input id="pin-input" type="password" maxlength="4" inputmode="numeric" placeholder="••••"/>
+  <div id="pin-error"></div>
+  <button id="pin-btn" onclick="checkPin()">Enter</button>
+</div>
+
+<div id="app">
+  <div class="header">
+    <div>
+      <div class="header-title">AISA · Compliance tracker</div>
+      <div class="header-sub" id="today-label"></div>
+    </div>
+    <div class="nav">
+      <button class="active" onclick="setView('log')">Log</button>
+      <button onclick="setView('history')">History</button>
+      <button onclick="setView('search')">Search</button>
+      <button onclick="setView('export')">Export</button>
+    </div>
+  </div>
+
+  <div class="summary-grid" id="summary-grid"></div>
+
+  <div id="view-log">
+    <div class="type-tabs" id="type-tabs"></div>
+    <div class="card">
+      <div class="section-label" id="log-label">Log Student ID — enter student number</div>
+      <div class="input-row">
+        <input id="student-input" type="text" inputmode="numeric" placeholder="e.g. 44612" oninput="handleInput(this.value)" onkeydown="if(event.key==='Enter')logEntry()"/>
+        <button class="log-btn" id="log-btn" onclick="logEntry()">Log</button>
+      </div>
+      <div id="match-preview"></div>
+      <div id="flash"></div>
+    </div>
+    <div style="font-size:13px;font-weight:500;color:#888;margin-bottom:8px" id="today-log-label">Today's log</div>
+    <div id="today-log-list"></div>
+  </div>
+
+  <div id="view-history" style="display:none">
+    <div class="type-tabs" id="hist-type-tabs"></div>
+    <div id="history-list"></div>
+  </div>
+
+  <div id="view-search" style="display:none">
+    <div class="card">
+      <div class="section-label">Search by student number</div>
+      <div class="input-row">
+        <input id="search-input" type="text" inputmode="numeric" placeholder="Enter student number" onkeydown="if(event.key==='Enter')doSearch()"/>
+        <button class="log-btn active" style="background:#185FA5" onclick="doSearch()">Search</button>
+      </div>
+    </div>
+    <div id="search-result"></div>
+  </div>
+
+  <div id="view-export" style="display:none">
+    <div class="card">
+      <div style="font-size:15px;font-weight:500;margin-bottom:4px">Whole-school report</div>
+      <div style="font-size:13px;color:#888;margin-bottom:16px">Filter by compliance type, date range, and grade level.</div>
+      <div class="filter-label">Compliance type</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px" id="exp-type-pills"></div>
+      <div class="date-grid">
+        <div><label>From</label><input type="date" id="exp-from" onchange="renderExportCount()"/></div>
+        <div><label>To</label><input type="date" id="exp-to" onchange="renderExportCount()"/></div>
+      </div>
+      <div class="filter-label">Grade levels</div>
+      <div style="display:flex;gap:8px;margin-bottom:14px" id="exp-grade-pills"></div>
+      <div style="padding:10px 14px;border-radius:8px;background:#f5f5f0;margin-bottom:14px;font-size:13px;color:#888" id="exp-count">0 entries match your filters</div>
+      <button class="dl-btn" id="dl-btn" onclick="exportFiltered()" disabled>Download report (CSV) ↓</button>
+    </div>
+    <div class="card">
+      <div style="font-size:15px;font-weight:500;margin-bottom:4px">Individual student report</div>
+      <div style="font-size:13px;color:#888;margin-bottom:14px">Export a student's full compliance history by ID number.</div>
+      <div class="input-row" style="margin-bottom:12px">
+        <input id="exp-student-input" type="text" inputmode="numeric" placeholder="Student number" onkeydown="if(event.key==='Enter')findExpStudent()"/>
+        <button class="log-btn active" style="background:#f5f5f0;color:#333;border:0.5px solid #ddd" onclick="findExpStudent()">Find</button>
+      </div>
+      <div id="exp-student-result"></div>
+    </div>
+    <div class="card" style="background:#f5f5f0">
+      <div style="font-weight:500;margin-bottom:8px;font-size:14px">Year to date</div>
+      <div class="ytd-grid" id="ytd-grid"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CORRECT_PIN = "9117";
+const TYPES = ["id","uniform","pouch"];
+const TYPE_LABELS = {id:"Student ID",uniform:"Uniform",pouch:"Phone Pouch"};
+const TYPE_COLORS = {id:"#185FA5",uniform:"#0F6E56",pouch:"#993C1D"};
+const TYPE_LIGHT  = {id:"#E6F1FB",uniform:"#E1F5EE",pouch:"#FAECE7"};
+const GRADES = ["6","7","8"];
+const gc = g => g==="6"?"#185FA5":g==="7"?"#534AB7":"#993C1D";
+const gl = g => g==="6"?"#E6F1FB":g==="7"?"#EEEDFE":"#FAECE7";
+const fmt = d => new Date(d+"T12:00:00").toLocaleDateString("en-AE",{weekday:"short",day:"numeric",month:"short",year:"numeric"});
+const today = () => new Date().toISOString().split("T")[0];
+const STORAGE_KEY = "aisa_compliance_v1";
+
+// Student roster — ID number and grade only (no names)
 const STUDENTS = [
-  {num:"44612",name:"Abdelghani, Zaina",grade:"6",hr:"G06HR3"},
-  {num:"50653",name:"Abdelhamid, Mazen Mahmoud",grade:"6",hr:"B06HR2"},
-  {num:"52114",name:"Abdimanap, Mansour",grade:"6",hr:"B06HR2"},
-  {num:"45542",name:"Abdulahi, Nada",grade:"6",hr:"G06HR2"},
-  {num:"35785",name:"AbdulRahman, Omar",grade:"6",hr:"B06HR3"},
-  {num:"48603",name:"Abou Morra, Cyrine",grade:"6",hr:"G06HR1"},
-  {num:"38641",name:"Abujarad, Abdullah",grade:"6",hr:"B06HR3"},
-  {num:"35646",name:"Adwan, Eman",grade:"6",hr:"G06HR1"},
-  {num:"35707",name:"Ait Kaddour, Nour",grade:"6",hr:"G06HR2"},
-  {num:"35671",name:"Al Ankar, Yousef",grade:"6",hr:"B06HR4"},
-  {num:"38368",name:"Al Karim, Hiyam",grade:"6",hr:"G06HR2"},
-  {num:"45465",name:"Al Murry, Zayed",grade:"6",hr:"B06HR3"},
-  {num:"37603",name:"Al Omary, Kareem",grade:"6",hr:"B06HR4"},
-  {num:"35686",name:"Al Radhi, Hamdan Rashed",grade:"6",hr:"B06HR3"},
-  {num:"35696",name:"Al Tamimi, Aziz",grade:"6",hr:"B06HR1"},
-  {num:"35622",name:"Al Yazori, Celina",grade:"6",hr:"G06HR1"},
-  {num:"48280",name:"Alamat, Meryl",grade:"6",hr:"G06HR3"},
-  {num:"50698",name:"Alameen, Ali Mohammed A Saeed",grade:"6",hr:"B06HR2"},
-  {num:"46392",name:"Alawlaqi, Reem",grade:"6",hr:"G06HR1"},
-  {num:"36475",name:"Albreiki, Meera",grade:"6",hr:"G06HR1"},
-  {num:"51307",name:"Albreiki, Shamma Mohamed",grade:"6",hr:"G06HR1"},
-  {num:"35804",name:"Aldhaheri, Ahmed",grade:"6",hr:"B06HR3"},
-  {num:"46909",name:"Aldhaheri, Hamda",grade:"6",hr:"G06HR1"},
-  {num:"35806",name:"Aldhaheri, Mohammed",grade:"6",hr:"B06HR4"},
-  {num:"46682",name:"Alhameli, Sultan",grade:"6",hr:"B06HR1"},
-  {num:"36696",name:"Alharbi, Saif",grade:"6",hr:"B06HR3"},
-  {num:"45034",name:"AlJeraisi, Leen",grade:"6",hr:"G06HR3"},
-  {num:"35815",name:"Alkhoori, Ahmed",grade:"6",hr:"B06HR4"},
-  {num:"38231",name:"Almazrouei, Diyab",grade:"6",hr:"B06HR3"},
-  {num:"51115",name:"Almheiri, Meena",grade:"6",hr:"G06HR3"},
-  {num:"45869",name:"Alnaqbi, Rahaf",grade:"6",hr:"G06HR3"},
-  {num:"37328",name:"Alqubaisi, Faris",grade:"6",hr:"B06HR1"},
-  {num:"36478",name:"Alsakka, Hala",grade:"6",hr:"G06HR2"},
-  {num:"51044",name:"Alseiari, Alanood Abdulla",grade:"6",hr:"G06HR1"},
-  {num:"36189",name:"Alsereidi, Naser",grade:"6",hr:"B06HR4"},
-  {num:"35843",name:"Ammar, Aly",grade:"6",hr:"B06HR1"},
-  {num:"44870",name:"Anoohi, Mohamed",grade:"6",hr:"B06HR1"},
-  {num:"51503",name:"Attia, Joury",grade:"6",hr:"G06HR3"},
-  {num:"35729",name:"Awadin, Mira",grade:"6",hr:"G06HR1"},
-  {num:"47213",name:"Bakri, Salma",grade:"6",hr:"G06HR2"},
-  {num:"43144",name:"Ben Lakhoua, Makram",grade:"6",hr:"B06HR1"},
-  {num:"47776",name:"Benmansour, Abdelhadi",grade:"6",hr:"B06HR2"},
-  {num:"32475",name:"Bin Saad, Qasayed",grade:"6",hr:"G06HR3"},
-  {num:"36211",name:"Blazquez Serrano, Sara",grade:"6",hr:"G06HR2"},
-  {num:"35788",name:"Bodota, Deza Michel",grade:"6",hr:"G06HR1"},
-  {num:"51918",name:"Brosoto, William Jr. Velasco",grade:"6",hr:"B06HR4"},
-  {num:"51697",name:"El Chawa, Mayssam Saeed",grade:"6",hr:"G06HR1"},
-  {num:"35946",name:"El Jazzar, Yara",grade:"6",hr:"G06HR3"},
-  {num:"36167",name:"El Tabie, Malika",grade:"6",hr:"G06HR2"},
-  {num:"44547",name:"El-Helweh, Mariam",grade:"6",hr:"G06HR2"},
-  {num:"48450",name:"Elcheikh, Jad",grade:"6",hr:"B06HR1"},
-  {num:"36997",name:"Elmshwat, Ali",grade:"6",hr:"B06HR1"},
-  {num:"51267",name:"Elsayed, Hamza Ahmed",grade:"6",hr:"B06HR4"},
-  {num:"45185",name:"Esh, Seif",grade:"6",hr:"B06HR3"},
-  {num:"48354",name:"Eshbair, Riyad",grade:"6",hr:"B06HR2"},
-  {num:"36003",name:"Ezzeddine, Sama",grade:"6",hr:"G06HR3"},
-  {num:"47038",name:"Fakhro, Khalifa",grade:"6",hr:"B06HR2"},
-  {num:"35649",name:"Farah, Lily",grade:"6",hr:"G06HR3"},
-  {num:"52440",name:"Faris, Eisa",grade:"6",hr:""},
-  {num:"51900",name:"Fatima, Hooria Fatima",grade:"6",hr:""},
-  {num:"46641",name:"Fayoumi, Jad",grade:"6",hr:"B06HR3"},
-  {num:"40129",name:"Gad Alla, Nadeen",grade:"6",hr:"G06HR1"},
-  {num:"36368",name:"Goomany, Aarav",grade:"6",hr:"B06HR3"},
-  {num:"44394",name:"Hamad, Mira",grade:"6",hr:"G06HR1"},
-  {num:"35813",name:"Hamdan, Anees",grade:"6",hr:"B06HR2"},
-  {num:"38481",name:"Jadalla, Hanan",grade:"6",hr:"G06HR3"},
-  {num:"47510",name:"Jalbout, Leya",grade:"6",hr:"G06HR3"},
-  {num:"47445",name:"Jaradat, Yahya",grade:"6",hr:"B06HR1"},
-  {num:"45886",name:"Joudi, Karim",grade:"6",hr:"B06HR1"},
-  {num:"35794",name:"Kantoush, Aly",grade:"6",hr:"B06HR2"},
-  {num:"35761",name:"Kantoush, Yahya",grade:"6",hr:"B06HR4"},
-  {num:"35668",name:"Kovacs, Ajna Luca",grade:"6",hr:"G06HR2"},
-  {num:"45520",name:"Kumar, Nurai",grade:"6",hr:"G06HR3"},
-  {num:"46645",name:"Lahoud, Leah",grade:"6",hr:"G06HR3"},
-  {num:"45351",name:"Maher, Patrick",grade:"6",hr:"B06HR2"},
-  {num:"52264",name:"Miladin, Jahja",grade:"6",hr:"B06HR3"},
-  {num:"50863",name:"Mohammed, Lieanne",grade:"6",hr:"G06HR2"},
-  {num:"35669",name:"Mohd Firrdaus, Muhammad Farris",grade:"6",hr:"B06HR3"},
-  {num:"52318",name:"Mordjani, Kawther Fatima Zohra",grade:"6",hr:""},
-  {num:"45599",name:"Ngo, Colin",grade:"6",hr:"B06HR3"},
-  {num:"48273",name:"Obeidou, Jad Shadi",grade:"6",hr:"B06HR1"},
-  {num:"50739",name:"Ofowena, Samuel Ogheneovo",grade:"6",hr:"B06HR4"},
-  {num:"51285",name:"Owais, Syeda Ayesha",grade:"6",hr:"G06HR2"},
-  {num:"47076",name:"Prado, Dane Laurence",grade:"6",hr:"B06HR2"},
-  {num:"35685",name:"Radi, Layan",grade:"6",hr:"G06HR2"},
-  {num:"50829",name:"Saad, Zayed",grade:"6",hr:"B06HR3"},
-  {num:"45748",name:"Saade, Hannah Maria",grade:"6",hr:"G06HR1"},
-  {num:"36004",name:"Salman, Laith",grade:"6",hr:"B06HR1"},
-  {num:"50901",name:"Sasmito, Ainun Lituhayu",grade:"6",hr:"G06HR2"},
-  {num:"35734",name:"Sawda, Zouheir",grade:"6",hr:"B06HR2"},
-  {num:"46846",name:"Sondhi, Alia",grade:"6",hr:"G06HR1"},
-  {num:"35891",name:"Tag Eldin, Saif",grade:"6",hr:"B06HR4"},
-  {num:"51587",name:"Tanveer, Mariya",grade:"6",hr:"G06HR3"},
-  {num:"35711",name:"Yaziji, Abdullah",grade:"6",hr:"B06HR1"},
-  {num:"35934",name:"Yoon, EunHye",grade:"6",hr:"G06HR1"},
-  {num:"48199",name:"Zhaim, Mila",grade:"6",hr:"G06HR2"},
-  {num:"38753",name:"Abdelmeguid, Julia",grade:"7",hr:"G07HR1"},
-  {num:"33101",name:"Abu baker, Tala",grade:"7",hr:"G07HR1"},
-  {num:"31818",name:"Addad, Retaaj",grade:"7",hr:"G07HR1"},
-  {num:"31557",name:"Ahmed, Omar",grade:"7",hr:"B07HR1"},
-  {num:"31578",name:"Al Breiki, Mohamed",grade:"7",hr:"B07HR1"},
-  {num:"38152",name:"Al Darmaki, Khalifa",grade:"7",hr:"B07HR3"},
-  {num:"51753",name:"Al Hameli, Salem Saif",grade:"7",hr:"B07HR3"},
-  {num:"44498",name:"Al Jumaily, Lubna",grade:"7",hr:"G07HR2"},
-  {num:"31595",name:"Al Kasawneh, Hala",grade:"7",hr:"G07HR4"},
-  {num:"32461",name:"Al Marar, Khalifa",grade:"7",hr:"B07HR1"},
-  {num:"31944",name:"Al Massri, Tiana",grade:"7",hr:"G07HR4"},
-  {num:"35337",name:"Al Maysari, Huda",grade:"7",hr:"G07HR3"},
-  {num:"32220",name:"Al Mazrouei, Mohamed",grade:"7",hr:"B07HR4"},
-  {num:"32466",name:"Al Mazrouei, Obaid",grade:"7",hr:"B07HR3"},
-  {num:"32666",name:"Al Mazrouei, Sherina",grade:"7",hr:"G07HR1"},
-  {num:"32237",name:"Al Mehairbi, Noura",grade:"7",hr:"G07HR1"},
-  {num:"32694",name:"Al Romaithi, Sabha",grade:"7",hr:"G07HR4"},
-  {num:"32025",name:"Al Zawaideh, Rimon",grade:"7",hr:"B07HR3"},
-  {num:"32344",name:"Alameri, Wadeema",grade:"7",hr:"G07HR1"},
-  {num:"31977",name:"AlAmmari, Reem",grade:"7",hr:"G07HR2"},
-  {num:"52343",name:"Alatbee, Adam",grade:"7",hr:""},
-  {num:"31637",name:"AlFardan, Mohamed",grade:"7",hr:"B07HR1"},
-  {num:"52254",name:"Alhameli, Alyazia Mohammed",grade:"7",hr:"G07HR2"},
-  {num:"33208",name:"Alharbi, Noura",grade:"7",hr:"G07HR2"},
-  {num:"46662",name:"Alhosani, Shamma",grade:"7",hr:"G07HR4"},
-  {num:"45033",name:"AlJeraisi, Mariam",grade:"7",hr:"G07HR2"},
-  {num:"33241",name:"Almasri, Abdulrahman",grade:"7",hr:"B07HR4"},
-  {num:"52231",name:"Almheiri, Saif Khaled",grade:"7",hr:"B07HR3"},
-  {num:"27762",name:"Almulla, Shamma",grade:"7",hr:"G07HR3"},
-  {num:"45870",name:"Alnaqbi, Raghad",grade:"7",hr:"G07HR4"},
-  {num:"47256",name:"Alnimrawi, Qais",grade:"7",hr:"B06HR3"},
-  {num:"44664",name:"AlNuaimi, Hassan",grade:"7",hr:"B07HR4"},
-  {num:"33218",name:"Alotaiba, Meera",grade:"7",hr:"G07HR1"},
-  {num:"31680",name:"AlQamzi, Abdulla",grade:"7",hr:"B07HR1"},
-  {num:"51789",name:"Alsharyawi, Ali Hussain",grade:"7",hr:"B07HR3"},
-  {num:"51887",name:"Altawal, Sofia Faris",grade:"7",hr:"G07HR3"},
-  {num:"32103",name:"Alya, Majd",grade:"7",hr:"B07HR1"},
-  {num:"40022",name:"Amin, Yousef",grade:"7",hr:"B07HR2"},
-  {num:"44015",name:"Anoohi, Khaled",grade:"7",hr:"B07HR4"},
-  {num:"33733",name:"Aoun, Aleksandra",grade:"7",hr:"G07HR4"},
-  {num:"52514",name:"Badaa, Yara Raja",grade:"7",hr:""},
-  {num:"51815",name:"Bassem Hassan, Lolia Mahmoud",grade:"7",hr:"G07HR3"},
-  {num:"45841",name:"Batocael, Stephanie Alexi",grade:"7",hr:"G07HR4"},
-  {num:"32806",name:"Binti Irwan, Azra",grade:"7",hr:"G07HR3"},
-  {num:"52160",name:"Bsharat, Ryan",grade:"7",hr:"B07HR2"},
-  {num:"34256",name:"Buan, Liam Angelo Lumba",grade:"7",hr:"B07HR4"},
-  {num:"48244",name:"Drwich, Mariam",grade:"7",hr:"G07HR2"},
-  {num:"46517",name:"Elarabi, Lana",grade:"7",hr:"G07HR3"},
-  {num:"33653",name:"Elhaddad, Omar Ahmed",grade:"7",hr:"B07HR1"},
-  {num:"31436",name:"ElHusseiny, Adam Taylan",grade:"7",hr:"B07HR1"},
-  {num:"46316",name:"Elshair, Tasneem",grade:"7",hr:"G07HR2"},
-  {num:"35654",name:"Elsweedy, Fayrouz",grade:"7",hr:"G07HR1"},
-  {num:"47385",name:"Eltahir, Mustafa",grade:"7",hr:"B07HR2"},
-  {num:"36026",name:"Elwan, Saif",grade:"7",hr:"B07HR2"},
-  {num:"48236",name:"Farid, Habiba",grade:"7",hr:"G07HR4"},
-  {num:"48487",name:"Fernandez, Yarra Isabelle",grade:"7",hr:"G07HR3"},
-  {num:"45331",name:"Fetouh, Ahmed",grade:"7",hr:"B07HR4"},
-  {num:"51272",name:"Ghoneim, Nour",grade:"7",hr:"G07HR3"},
-  {num:"52233",name:"Hasan, Sara",grade:"7",hr:"G07HR4"},
-  {num:"32334",name:"Hassan, Lena",grade:"7",hr:"G07HR1"},
-  {num:"44561",name:"Hesham, Zeyad",grade:"7",hr:"B07HR2"},
-  {num:"42349",name:"Ismail, Naya",grade:"7",hr:"G07HR4"},
-  {num:"47509",name:"Jalbout, Muhab",grade:"7",hr:"B07HR2"},
-  {num:"32822",name:"Khalouf, Hamza",grade:"7",hr:"B07HR2"},
-  {num:"45631",name:"Kim, Gunho",grade:"7",hr:"B07HR3"},
-  {num:"52482",name:"Landemalm-Buchanan, August Johan",grade:"7",hr:""},
-  {num:"33615",name:"Loubani, Hassan",grade:"7",hr:"B07HR2"},
-  {num:"32080",name:"Makki, Abdallah",grade:"7",hr:"B07HR4"},
-  {num:"51430",name:"Mamdouh, Lara",grade:"7",hr:"G07HR4"},
-  {num:"45593",name:"Masudi, Musa",grade:"7",hr:"B07HR4"},
-  {num:"46766",name:"Mejri, Noureen",grade:"7",hr:"G07HR3"},
-  {num:"47821",name:"Mekouar, Fadeel",grade:"7",hr:"B07HR3"},
-  {num:"47822",name:"Mekouar, Saleem",grade:"7",hr:"B07HR2"},
-  {num:"48158",name:"Nassar, Lara",grade:"7",hr:"G07HR2"},
-  {num:"47942",name:"Nibin, Joanna",grade:"7",hr:"G07HR2"},
-  {num:"32347",name:"Paladugu, Vinay",grade:"7",hr:"B07HR2"},
-  {num:"52084",name:"Park, Roy",grade:"7",hr:"B07HR4"},
-  {num:"31631",name:"Pham, Leah Wen",grade:"7",hr:"G07HR4"},
-  {num:"31856",name:"Ramirez Triana, Sofia Elisa",grade:"7",hr:"G07HR1"},
-  {num:"32685",name:"Rohani, Dorsa",grade:"7",hr:"G07HR1"},
-  {num:"48154",name:"Sabeh Aayoun, Khaled",grade:"7",hr:"B07HR1"},
-  {num:"31107",name:"Salameh, Joudi",grade:"7",hr:"G07HR1"},
-  {num:"51536",name:"Shahin, Shehab",grade:"7",hr:"B07HR3"},
-  {num:"36123",name:"Singh, Aarshan",grade:"7",hr:"B07HR3"},
-  {num:"33461",name:"Singh, Nikta",grade:"7",hr:"G07HR3"},
-  {num:"47103",name:"Swadi, Ali",grade:"7",hr:"B07HR2"},
-  {num:"51333",name:"Tabbara, Haya",grade:"7",hr:"G07HR3"},
-  {num:"32337",name:"Taha, Layana",grade:"7",hr:"G07HR2"},
-  {num:"32216",name:"Tannous, Jamila Katherine",grade:"7",hr:"G07HR3"},
-  {num:"32950",name:"Uzzam, Omar",grade:"7",hr:"B07HR4"},
-  {num:"46796",name:"Verbenskyi, Maks",grade:"7",hr:"B07HR2"},
-  {num:"44739",name:"Younis, Zain",grade:"7",hr:"B07HR1"},
-  {num:"51495",name:"Zaher, Yousif",grade:"7",hr:"B07HR1"},
-  {num:"50665",name:"Zakaria, Yaseen",grade:"7",hr:"B07HR3"},
-  {num:"28485",name:"AbdulRahman, Hamad",grade:"8",hr:"B08HR2"},
-  {num:"51748",name:"Abu Hamour, Nancy",grade:"8",hr:"G08HR2"},
-  {num:"38362",name:"Abuhantash, Abdullah",grade:"8",hr:"B08HR1"},
-  {num:"28114",name:"Afifi, Yassin",grade:"8",hr:"B08HR3"},
-  {num:"50999",name:"Al Fahim, Mouza Mohammed",grade:"8",hr:"G08HR1"},
-  {num:"29233",name:"Al Hameli, Lamya",grade:"8",hr:"G08HR2"},
-  {num:"47584",name:"Al Hashmi, Hoor",grade:"8",hr:"G08HR3"},
-  {num:"28609",name:"Al Jneibi, Mohamed",grade:"8",hr:"B08HR1"},
-  {num:"29675",name:"Al Junaibi, Theyab",grade:"8",hr:"B08HR4"},
-  {num:"24034",name:"Al Marar, Kaltham",grade:"8",hr:"G08HR3"},
-  {num:"28143",name:"Al Mazrouei, Hamad",grade:"8",hr:"B08HR4"},
-  {num:"29805",name:"Al Mazrouei, Khamis",grade:"8",hr:"B08HR2"},
-  {num:"28691",name:"Al Mehairi, Salama",grade:"8",hr:"G08HR1"},
-  {num:"44670",name:"Al Nuaimi, Khalifa",grade:"8",hr:"B08HR2"},
-  {num:"28719",name:"Al Radhi, Mariam",grade:"8",hr:"G08HR2"},
-  {num:"28735",name:"Al Seairi, Khalifa",grade:"8",hr:"B08HR3"},
-  {num:"29509",name:"Al Suwaidi, Noora",grade:"8",hr:"G08HR4"},
-  {num:"28033",name:"Albreiki, Zayed",grade:"8",hr:"B08HR4"},
-  {num:"50621",name:"Aldhaheri, Khaled Saif",grade:"8",hr:"B08HR3"},
-  {num:"50622",name:"Aldhaheri, Zayed Saif",grade:"8",hr:"B08HR1"},
-  {num:"51975",name:"Alfahim, Raysa Eissa",grade:"8",hr:"G08HR2"},
-  {num:"48426",name:"Alhammadi, Hamdan Adnan",grade:"8",hr:"B08HR4"},
-  {num:"41548",name:"AlHayek, Ameer",grade:"8",hr:"B08HR1"},
-  {num:"45265",name:"Alhyari, Yousef",grade:"8",hr:"B08HR4"},
-  {num:"28732",name:"Alkatheeri, Sultan Rashed",grade:"8",hr:"B08HR2"},
-  {num:"29291",name:"Alkhzouz, Sanad",grade:"8",hr:"B08HR4"},
-  {num:"32566",name:"Allam, Farida",grade:"8",hr:"G08HR3"},
-  {num:"30350",name:"Almesber, Rachel",grade:"8",hr:"G08HR3"},
-  {num:"47439",name:"Almheiri, Khalifa",grade:"8",hr:"B08HR1"},
-  {num:"29337",name:"Almulla, Hessa",grade:"8",hr:"G08HR2"},
-  {num:"29716",name:"Alnaqbi, Mahra",grade:"8",hr:"G08HR3"},
-  {num:"45871",name:"Alnaqbi, Mahra Mohamed",grade:"8",hr:"G08HR1"},
-  {num:"40698",name:"Alotaiba, Hamda Khalaf",grade:"8",hr:"G08HR4"},
-  {num:"47678",name:"Alqubaisi, Lulwah",grade:"8",hr:"G08HR2"},
-  {num:"50702",name:"Alqubaisi, Maryam Ahmed",grade:"8",hr:"G08HR3"},
-  {num:"28281",name:"Alremeithi, Khalfan",grade:"8",hr:"B08HR2"},
-  {num:"28519",name:"Alsereidi, Nahayan",grade:"8",hr:"B08HR1"},
-  {num:"43494",name:"Anwar, Ayesha",grade:"8",hr:""},
-  {num:"50918",name:"Ashraf, Muhammadjoni",grade:"8",hr:"B08HR2"},
-  {num:"45348",name:"Balas, Fawaz",grade:"8",hr:"B08HR2"},
-  {num:"32511",name:"Bin Saad, Wadeema",grade:"8",hr:"G08HR1"},
-  {num:"51970",name:"Cavumbo, Anicalcia Patricia Candongo",grade:"8",hr:"G08HR4"},
-  {num:"46947",name:"Dlamini, Mabutfo",grade:"8",hr:"B08HR1"},
-  {num:"27582",name:"El Fout, Ahmad Mohammad",grade:"8",hr:"B08HR1"},
-  {num:"50701",name:"Elmasri, Salma Moustafa",grade:"8",hr:"G08HR1"},
-  {num:"47455",name:"Eshbair, Mohammed",grade:"8",hr:"B08HR3"},
-  {num:"27624",name:"Fayoumi, Adam",grade:"8",hr:"B08HR1"},
-  {num:"40201",name:"Gad Alla, Judy",grade:"8",hr:"G08HR3"},
-  {num:"48289",name:"Haidar, Ahmed Ramy",grade:"8",hr:"B08HR4"},
-  {num:"29749",name:"Hamdan, Nada",grade:"8",hr:"G08HR1"},
-  {num:"40992",name:"Hameidi, Qusai",grade:"8",hr:"B08HR2"},
-  {num:"52110",name:"Hasan, Nadia",grade:"8",hr:"G08HR2"},
-  {num:"28466",name:"Hasan, Tia",grade:"8",hr:"G08HR3"},
-  {num:"17595",name:"Hassan, Rovan",grade:"8",hr:"G08HR4"},
-  {num:"29294",name:"Idris, Reemas",grade:"8",hr:"G08HR1"},
-  {num:"28484",name:"Jamal El Den, Yara",grade:"8",hr:"G08HR1"},
-  {num:"52267",name:"Jerkovic, Mak",grade:"8",hr:"B08HR3"},
-  {num:"27761",name:"Kashan, Fatima",grade:"8",hr:"G08HR3"},
-  {num:"45588",name:"Khan Abrahamian, Sofia",grade:"8",hr:"G08HR3"},
-  {num:"27776",name:"Khatib, Hassan",grade:"8",hr:"B08HR3"},
-  {num:"34037",name:"Khraisheh, Omar",grade:"8",hr:"B08HR4"},
-  {num:"22697",name:"Kosmidis, Konstantinos",grade:"8",hr:"B08HR4"},
-  {num:"51054",name:"Kulsum, Areebah",grade:"8",hr:"G08HR4"},
-  {num:"46901",name:"Laqai, Liviana",grade:"8",hr:"G08HR4"},
-  {num:"36830",name:"Locquiao, Elijah Terem Macapaz",grade:"8",hr:"B08HR1"},
-  {num:"29097",name:"Mirghani, Ahmed",grade:"8",hr:"B08HR2"},
-  {num:"32248",name:"Mohd Firrdaus, Farrina",grade:"8",hr:"G08HR1"},
-  {num:"51399",name:"Mulugeta, Abel Alemseged",grade:"8",hr:"B08HR1"},
-  {num:"51398",name:"Mulugeta, Noel Alemseged",grade:"8",hr:"B08HR3"},
-  {num:"28335",name:"Mustafa, Lina",grade:"8",hr:"G08HR4"},
-  {num:"27739",name:"Nabhani, Zaydan",grade:"8",hr:"B08HR3"},
-  {num:"48465",name:"Pallath, Jennita J",grade:"8",hr:"G08HR4"},
-  {num:"50662",name:"Puente Morales, Alfonso",grade:"8",hr:"B08HR3"},
-  {num:"27786",name:"Radi, Hamad",grade:"8",hr:"B08HR1"},
-  {num:"47900",name:"Rim, Yeji",grade:"8",hr:"G08HR3"},
-  {num:"46542",name:"Rizvi, Syed Hasnain Murtaza",grade:"8",hr:"B08HR1"},
-  {num:"28125",name:"Rohani, Arad",grade:"8",hr:"B08HR3"},
-  {num:"27611",name:"Said, Jad",grade:"8",hr:"B08HR3"},
-  {num:"31119",name:"Said, Talya",grade:"8",hr:"G08HR2"},
-  {num:"50902",name:"Sasmito, Aira Parameswari",grade:"8",hr:"G08HR1"},
-  {num:"40705",name:"Seshadri, Haridra Lakshmi",grade:"8",hr:"G08HR2"},
-  {num:"28626",name:"Sony, Kshitij",grade:"8",hr:"B08HR2"},
-  {num:"50798",name:"Tabaza, Layan",grade:"8",hr:"G08HR2"},
-  {num:"47438",name:"Taha, Malek",grade:"8",hr:"B08HR1"},
-  {num:"27650",name:"Tubaishat, Mohamad",grade:"8",hr:"B08HR3"},
-  {num:"29079",name:"Yamazaki, Kozo",grade:"8",hr:"B08HR3"},
-  {num:"31588",name:"Yap, Reschelie Carmelo",grade:"8",hr:"B08HR2"},
-  {num:"27982",name:"Yassin, Kareem",grade:"8",hr:"B08HR4"},
-  {num:"27979",name:"Yassin, Yara",grade:"8",hr:"G08HR1"},
-  {num:"51749",name:"Yusuf, Mohammed",grade:"8",hr:"B08HR2"},
-  {num:"40691",name:"Zahed, Adam",grade:"8",hr:"B08HR4"},
+  {num:"44612",grade:"6"},{num:"50653",grade:"6"},{num:"52114",grade:"6"},
+  {num:"45542",grade:"6"},{num:"35785",grade:"6"},{num:"48603",grade:"6"},
+  {num:"38641",grade:"6"},{num:"35646",grade:"6"},{num:"35707",grade:"6"},
+  {num:"35671",grade:"6"},{num:"38368",grade:"6"},{num:"45465",grade:"6"},
+  {num:"37603",grade:"6"},{num:"35686",grade:"6"},{num:"35696",grade:"6"},
+  {num:"35622",grade:"6"},{num:"48280",grade:"6"},{num:"50698",grade:"6"},
+  {num:"46392",grade:"6"},{num:"36475",grade:"6"},{num:"51307",grade:"6"},
+  {num:"35804",grade:"6"},{num:"46909",grade:"6"},{num:"35806",grade:"6"},
+  {num:"46682",grade:"6"},{num:"36696",grade:"6"},{num:"45034",grade:"6"},
+  {num:"35815",grade:"6"},{num:"38231",grade:"6"},{num:"51115",grade:"6"},
+  {num:"45869",grade:"6"},{num:"37328",grade:"6"},{num:"36478",grade:"6"},
+  {num:"51044",grade:"6"},{num:"36189",grade:"6"},{num:"35843",grade:"6"},
+  {num:"44870",grade:"6"},{num:"51503",grade:"6"},{num:"35729",grade:"6"},
+  {num:"47213",grade:"6"},{num:"43144",grade:"6"},{num:"47776",grade:"6"},
+  {num:"32475",grade:"6"},{num:"36211",grade:"6"},{num:"35788",grade:"6"},
+  {num:"51918",grade:"6"},{num:"51697",grade:"6"},{num:"35946",grade:"6"},
+  {num:"36167",grade:"6"},{num:"44547",grade:"6"},{num:"48450",grade:"6"},
+  {num:"36997",grade:"6"},{num:"51267",grade:"6"},{num:"45185",grade:"6"},
+  {num:"48354",grade:"6"},{num:"36003",grade:"6"},{num:"47038",grade:"6"},
+  {num:"35649",grade:"6"},{num:"52440",grade:"6"},{num:"51900",grade:"6"},
+  {num:"46641",grade:"6"},{num:"40129",grade:"6"},{num:"36368",grade:"6"},
+  {num:"44394",grade:"6"},{num:"35813",grade:"6"},{num:"38481",grade:"6"},
+  {num:"47510",grade:"6"},{num:"47445",grade:"6"},{num:"45886",grade:"6"},
+  {num:"35794",grade:"6"},{num:"35761",grade:"6"},{num:"35668",grade:"6"},
+  {num:"45520",grade:"6"},{num:"46645",grade:"6"},{num:"45351",grade:"6"},
+  {num:"52264",grade:"6"},{num:"50863",grade:"6"},{num:"35669",grade:"6"},
+  {num:"52318",grade:"6"},{num:"45599",grade:"6"},{num:"48273",grade:"6"},
+  {num:"50739",grade:"6"},{num:"51285",grade:"6"},{num:"47076",grade:"6"},
+  {num:"35685",grade:"6"},{num:"50829",grade:"6"},{num:"45748",grade:"6"},
+  {num:"36004",grade:"6"},{num:"50901",grade:"6"},{num:"35734",grade:"6"},
+  {num:"46846",grade:"6"},{num:"35891",grade:"6"},{num:"51587",grade:"6"},
+  {num:"35711",grade:"6"},{num:"35934",grade:"6"},{num:"48199",grade:"6"},
+  {num:"38753",grade:"7"},{num:"33101",grade:"7"},{num:"31818",grade:"7"},
+  {num:"31557",grade:"7"},{num:"31578",grade:"7"},{num:"38152",grade:"7"},
+  {num:"51753",grade:"7"},{num:"44498",grade:"7"},{num:"31595",grade:"7"},
+  {num:"32461",grade:"7"},{num:"31944",grade:"7"},{num:"35337",grade:"7"},
+  {num:"32220",grade:"7"},{num:"32466",grade:"7"},{num:"32666",grade:"7"},
+  {num:"32237",grade:"7"},{num:"32694",grade:"7"},{num:"32025",grade:"7"},
+  {num:"32344",grade:"7"},{num:"31977",grade:"7"},{num:"52343",grade:"7"},
+  {num:"31637",grade:"7"},{num:"52254",grade:"7"},{num:"33208",grade:"7"},
+  {num:"46662",grade:"7"},{num:"45033",grade:"7"},{num:"33241",grade:"7"},
+  {num:"52231",grade:"7"},{num:"27762",grade:"7"},{num:"45870",grade:"7"},
+  {num:"47256",grade:"7"},{num:"44664",grade:"7"},{num:"33218",grade:"7"},
+  {num:"31680",grade:"7"},{num:"51789",grade:"7"},{num:"51887",grade:"7"},
+  {num:"32103",grade:"7"},{num:"40022",grade:"7"},{num:"44015",grade:"7"},
+  {num:"33733",grade:"7"},{num:"52514",grade:"7"},{num:"51815",grade:"7"},
+  {num:"45841",grade:"7"},{num:"32806",grade:"7"},{num:"52160",grade:"7"},
+  {num:"34256",grade:"7"},{num:"48244",grade:"7"},{num:"46517",grade:"7"},
+  {num:"33653",grade:"7"},{num:"31436",grade:"7"},{num:"46316",grade:"7"},
+  {num:"35654",grade:"7"},{num:"47385",grade:"7"},{num:"36026",grade:"7"},
+  {num:"48236",grade:"7"},{num:"48487",grade:"7"},{num:"45331",grade:"7"},
+  {num:"51272",grade:"7"},{num:"52233",grade:"7"},{num:"32334",grade:"7"},
+  {num:"44561",grade:"7"},{num:"42349",grade:"7"},{num:"47509",grade:"7"},
+  {num:"32822",grade:"7"},{num:"45631",grade:"7"},{num:"52482",grade:"7"},
+  {num:"33615",grade:"7"},{num:"32080",grade:"7"},{num:"51430",grade:"7"},
+  {num:"45593",grade:"7"},{num:"46766",grade:"7"},{num:"47821",grade:"7"},
+  {num:"47822",grade:"7"},{num:"48158",grade:"7"},{num:"47942",grade:"7"},
+  {num:"32347",grade:"7"},{num:"52084",grade:"7"},{num:"31631",grade:"7"},
+  {num:"31856",grade:"7"},{num:"32685",grade:"7"},{num:"48154",grade:"7"},
+  {num:"31107",grade:"7"},{num:"51536",grade:"7"},{num:"36123",grade:"7"},
+  {num:"33461",grade:"7"},{num:"47103",grade:"7"},{num:"51333",grade:"7"},
+  {num:"32337",grade:"7"},{num:"32216",grade:"7"},{num:"32950",grade:"7"},
+  {num:"46796",grade:"7"},{num:"44739",grade:"7"},{num:"51495",grade:"7"},
+  {num:"50665",grade:"7"},
+  {num:"28485",grade:"8"},{num:"51748",grade:"8"},{num:"38362",grade:"8"},
+  {num:"28114",grade:"8"},{num:"50999",grade:"8"},{num:"29233",grade:"8"},
+  {num:"47584",grade:"8"},{num:"28609",grade:"8"},{num:"29675",grade:"8"},
+  {num:"24034",grade:"8"},{num:"28143",grade:"8"},{num:"29805",grade:"8"},
+  {num:"28691",grade:"8"},{num:"44670",grade:"8"},{num:"28719",grade:"8"},
+  {num:"28735",grade:"8"},{num:"29509",grade:"8"},{num:"28033",grade:"8"},
+  {num:"50621",grade:"8"},{num:"50622",grade:"8"},{num:"51975",grade:"8"},
+  {num:"48426",grade:"8"},{num:"41548",grade:"8"},{num:"45265",grade:"8"},
+  {num:"28732",grade:"8"},{num:"29291",grade:"8"},{num:"32566",grade:"8"},
+  {num:"30350",grade:"8"},{num:"47439",grade:"8"},{num:"29337",grade:"8"},
+  {num:"29716",grade:"8"},{num:"45871",grade:"8"},{num:"40698",grade:"8"},
+  {num:"47678",grade:"8"},{num:"50702",grade:"8"},{num:"28281",grade:"8"},
+  {num:"28519",grade:"8"},{num:"43494",grade:"8"},{num:"50918",grade:"8"},
+  {num:"45348",grade:"8"},{num:"32511",grade:"8"},{num:"51970",grade:"8"},
+  {num:"46947",grade:"8"},{num:"27582",grade:"8"},{num:"50701",grade:"8"},
+  {num:"47455",grade:"8"},{num:"27624",grade:"8"},{num:"40201",grade:"8"},
+  {num:"48289",grade:"8"},{num:"29749",grade:"8"},{num:"40992",grade:"8"},
+  {num:"52110",grade:"8"},{num:"28466",grade:"8"},{num:"17595",grade:"8"},
+  {num:"29294",grade:"8"},{num:"28484",grade:"8"},{num:"52267",grade:"8"},
+  {num:"27761",grade:"8"},{num:"45588",grade:"8"},{num:"27776",grade:"8"},
+  {num:"34037",grade:"8"},{num:"22697",grade:"8"},{num:"51054",grade:"8"},
+  {num:"46901",grade:"8"},{num:"36830",grade:"8"},{num:"29097",grade:"8"},
+  {num:"32248",grade:"8"},{num:"51399",grade:"8"},{num:"51398",grade:"8"},
+  {num:"28335",grade:"8"},{num:"27739",grade:"8"},{num:"48465",grade:"8"},
+  {num:"50662",grade:"8"},{num:"27786",grade:"8"},{num:"47900",grade:"8"},
+  {num:"46542",grade:"8"},{num:"28125",grade:"8"},{num:"27611",grade:"8"},
+  {num:"31119",grade:"8"},{num:"50902",grade:"8"},{num:"40705",grade:"8"},
+  {num:"28626",grade:"8"},{num:"50798",grade:"8"},{num:"47438",grade:"8"},
+  {num:"27650",grade:"8"},{num:"29079",grade:"8"},{num:"31588",grade:"8"},
+  {num:"27982",grade:"8"},{num:"27979",grade:"8"},{num:"51749",grade:"8"},
+  {num:"40691",grade:"8"},
 ];
 
 const studentMap = {};
 STUDENTS.forEach(s => { studentMap[s.num] = s; });
 
-const STORAGE_KEY = "aisa_compliance_v1";
-const GRADES = ["6","7","8"];
-const TYPES = ["id","uniform","pouch"];
-const TYPE_LABELS = {id:"Student ID",uniform:"Uniform",pouch:"Phone Pouch"};
-const TYPE_COLORS = {id:"#185FA5",uniform:"#0F6E56",pouch:"#993C1D"};
-const TYPE_LIGHT = {id:"#E6F1FB",uniform:"#E1F5EE",pouch:"#FAECE7"};
-const gc = g => g==="6"?"#185FA5":g==="7"?"#534AB7":"#993C1D";
-const gl = g => g==="6"?"#E6F1FB":g==="7"?"#EEEDFE":"#FAECE7";
-const fmt = d => new Date(d+"T12:00:00").toLocaleDateString("en-AE",{weekday:"short",day:"numeric",month:"short",year:"numeric"});
+let logs = {id:{},uniform:{},pouch:{}};
+let activeType = "id";
+let currentView = "log";
+let expGrades = ["6","7","8"];
+let expTypes = ["id","uniform","pouch"];
+let currentMatch = null;
+let flashTimer = null;
 
-export default function App() {
-  const [logs, setLogs] = useState({id:{},uniform:{},pouch:{}});
-  const [loading, setLoading] = useState(true);
-  const [activeType, setActiveType] = useState("id");
-  const [view, setView] = useState("log");
-  const [input, setInput] = useState("");
-  const [match, setMatch] = useState(null);
-  const [flash, setFlash] = useState("");
-  const [searchNum, setSearchNum] = useState("");
-  const [searchResult, setSearchResult] = useState(null);
-  const [expGrades, setExpGrades] = useState(["6","7","8"]);
-  const [expTypes, setExpTypes] = useState(["id","uniform","pouch"]);
-  const [expFrom, setExpFrom] = useState("");
-  const [expTo, setExpTo] = useState("");
-  const [expStudentNum, setExpStudentNum] = useState("");
-  const [expStudentResult, setExpStudentResult] = useState(null);
-  const inputRef = useRef(null);
-  const today = new Date().toISOString().split("T")[0];
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const r = await window.storage.get(STORAGE_KEY);
-        if(r) {
-          const d = JSON.parse(r.value);
-          setLogs({id:d.id||{},uniform:d.uniform||{},pouch:d.pouch||{}});
-        }
-      } catch {}
-      setLoading(false);
-    })();
-  }, []);
-
-  const persist = async d => { try { await window.storage.set(STORAGE_KEY, JSON.stringify(d)); } catch {} };
-
-  const handleEntry = v => {
-    setInput(v); setMatch(null);
-    if(v.trim().length >= 4) { const s = studentMap[v.trim()]; if(s) setMatch(s); }
-  };
-
-  const logEntry = () => {
-    if(!match) return;
-    const time = new Date().toLocaleTimeString("en-AE",{hour:"2-digit",minute:"2-digit"});
-    const updated = {...logs, [activeType]: {...logs[activeType]}};
-    if(!updated[activeType][today]) updated[activeType][today] = [];
-    updated[activeType][today] = [...updated[activeType][today], {...match, time, id: Date.now()}];
-    setLogs(updated); persist(updated);
-    setFlash(match.name); setInput(""); setMatch(null);
-    setTimeout(() => setFlash(""), 2000);
-    inputRef.current?.focus();
-  };
-
-  const remove = (type, date, id) => {
-    const updated = {...logs, [type]: {...logs[type]}};
-    updated[type][date] = updated[type][date].filter(i => i.id !== id);
-    if(!updated[type][date].length) delete updated[type][date];
-    setLogs(updated); persist(updated);
-  };
-
-  const yearCount = (type, num) => Object.values(logs[type]).flat().filter(i => i.num === num).length;
-  const allYearCount = num => TYPES.reduce((s,t) => s + yearCount(t,num), 0);
-  const todayLog = logs[activeType][today] || [];
-  const allDates = Object.keys(logs[activeType]).sort((a,b) => b.localeCompare(a));
-
-  const toggleGrade = g => setExpGrades(prev => prev.includes(g) ? prev.filter(x=>x!==g) : [...prev,g]);
-  const toggleType = t => setExpTypes(prev => prev.includes(t) ? prev.filter(x=>x!==t) : [...prev,t]);
-  const toggleAllTypes = () => setExpTypes(prev => prev.length===3 ? [] : ["id","uniform","pouch"]);
-
-  const getFiltered = () => {
-    const rows = [];
-    expTypes.forEach(t => {
-      Object.entries(logs[t]).forEach(([d,arr]) => {
-        if(expFrom && d < expFrom) return;
-        if(expTo && d > expTo) return;
-        arr.filter(i => expGrades.includes(i.grade)).forEach(i => {
-          rows.push({...i, date:d, type:t});
-        });
-      });
-    });
-    return rows.sort((a,b) => a.date.localeCompare(b.date));
-  };
-
-  const dl = (rows, name) => {
-    const csv = rows.map(r => r.map(c => '"'+String(c||"").replace(/"/g,'""')+'"').join(",")).join("\n");
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
-    a.download = name+".csv"; a.click();
-  };
-
-  const exportFiltered = () => {
-    const rows = [["Date","Time","Compliance Type","Student Name","Student Number","Grade","Homeroom","Total Count (Year)"]];
-    getFiltered().forEach(i => rows.push([i.date, i.time||"", TYPE_LABELS[i.type], i.name, i.num, "Grade "+i.grade, i.hr, yearCount(i.type, i.num)]));
-    dl(rows, "AISA_Compliance_Report");
-  };
-
-  const findExpStudent = () => {
-    const s = studentMap[expStudentNum.trim()];
-    if(!s) { setExpStudentResult("notfound"); return; }
-    const history = [];
-    TYPES.forEach(t => {
-      Object.entries(logs[t]).forEach(([d,arr]) => {
-        arr.filter(i => i.num === s.num).forEach(i => history.push({...i, date:d, type:t}));
-      });
-    });
-    history.sort((a,b) => a.date.localeCompare(b.date));
-    setExpStudentResult({student:s, history, counts:{id:yearCount("id",s.num), uniform:yearCount("uniform",s.num), pouch:yearCount("pouch",s.num)}});
-  };
-
-  const exportStudentReport = () => {
-    if(!expStudentResult || expStudentResult==="notfound") return;
-    const {student:s, history, counts} = expStudentResult;
-    const rows = [
-      ["Student Name","Student Number","Grade","Homeroom"],
-      [s.name, s.num, "Grade "+s.grade, s.hr],
-      [""],
-      ["Compliance Summary"],
-      ["Student ID — no ID", counts.id],
-      ["Uniform — noncompliance", counts.uniform],
-      ["Phone Pouch — missing pouch", counts.pouch],
-      ["Total", counts.id+counts.uniform+counts.pouch],
-      [""],
-      ["Date","Time","Compliance Type"]
-    ];
-    history.forEach(h => rows.push([h.date, h.time||"", TYPE_LABELS[h.type]]));
-    dl(rows, "AISA_Student_"+s.name.replace(/[^a-z0-9]/gi,"_"));
-  };
-
-  const doSearch = () => {
-    const s = studentMap[searchNum.trim()];
-    if(!s) { setSearchResult("notfound"); return; }
-    const history = [];
-    TYPES.forEach(t => {
-      Object.entries(logs[t]).forEach(([d,arr]) => {
-        arr.filter(i => i.num === s.num).forEach(i => history.push({...i, date:d, type:t}));
-      });
-    });
-    history.sort((a,b) => b.date.localeCompare(a.date));
-    setSearchResult({student:s, history, counts:{id:yearCount("id",s.num), uniform:yearCount("uniform",s.num), pouch:yearCount("pouch",s.num)}});
-  };
-
-  if(loading) return <div style={{padding:"2rem",color:"var(--color-text-secondary)",fontSize:14}}>Loading...</div>;
-
-  const allEntries = TYPES.flatMap(t => Object.values(logs[t]).flat());
-  const allLogDates = new Set(TYPES.flatMap(t => Object.keys(logs[t])));
-
-  return (
-    <div style={{padding:"1.25rem 1rem",maxWidth:680,margin:"0 auto"}}>
-      {/* Header */}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"1.25rem"}}>
-        <div>
-          <div style={{fontSize:17,fontWeight:500,color:"var(--color-text-primary)"}}>AISA · Compliance tracker</div>
-          <div style={{fontSize:12,color:"var(--color-text-secondary)",marginTop:2}}>{new Date().toLocaleDateString("en-AE",{weekday:"long",day:"numeric",month:"long",year:"numeric"})} · Middle school</div>
-        </div>
-        <div style={{display:"flex",gap:6}}>
-          {[{k:"log",l:"Log"},{k:"history",l:"History"},{k:"search",l:"Search"},{k:"export",l:"Export"}].map(({k,l}) => (
-            <button key={k} onClick={() => setView(k)} style={{fontSize:12,padding:"5px 12px",borderRadius:99,border:"0.5px solid "+(view===k?"var(--color-border-primary)":"var(--color-border-tertiary)"),background:view===k?"var(--color-background-secondary)":"transparent",color:"var(--color-text-primary)",cursor:"pointer",fontWeight:view===k?500:400}}>{l}</button>
-          ))}
-        </div>
-      </div>
-
-      {/* Summary cards — always visible */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:"1.25rem"}}>
-        {TYPES.map(t => {
-          const todayCount = (logs[t][today]||[]).length;
-          return (
-            <div key={t} onClick={() => { setActiveType(t); setView("log"); }} style={{background:activeType===t && view==="log"?TYPE_LIGHT[t]:"var(--color-background-secondary)",borderRadius:"var(--border-radius-md)",padding:"0.75rem",textAlign:"center",borderTop:"3px solid "+TYPE_COLORS[t],cursor:"pointer",border:activeType===t && view==="log"?"2px solid "+TYPE_COLORS[t]+"60":"0.5px solid var(--color-border-tertiary)",borderTopWidth:3,borderTopColor:TYPE_COLORS[t]}}>
-              <div style={{fontSize:22,fontWeight:500,color:TYPE_COLORS[t],lineHeight:1.1}}>{todayCount}</div>
-              <div style={{fontSize:11,color:"var(--color-text-secondary)",marginTop:4}}>{TYPE_LABELS[t]}</div>
-              <div style={{fontSize:10,color:"var(--color-text-tertiary)",marginTop:1}}>today</div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Type selector for log/history */}
-      {(view==="log"||view==="history") && (
-        <div style={{display:"flex",gap:8,marginBottom:"1rem"}}>
-          {TYPES.map(t => (
-            <button key={t} onClick={() => setActiveType(t)} style={{flex:1,padding:"8px",borderRadius:"var(--border-radius-md)",border:"1.5px solid "+(activeType===t?TYPE_COLORS[t]:"var(--color-border-tertiary)"),background:activeType===t?TYPE_LIGHT[t]:"transparent",color:activeType===t?TYPE_COLORS[t]:"var(--color-text-secondary)",cursor:"pointer",fontSize:13,fontWeight:activeType===t?500:400}}>{TYPE_LABELS[t]}</button>
-          ))}
-        </div>
-      )}
-
-      {/* LOG VIEW */}
-      {view==="log" && (
-        <div>
-          <div style={{background:"var(--color-background-primary)",border:"0.5px solid var(--color-border-tertiary)",borderRadius:"var(--border-radius-lg)",padding:"1.25rem",marginBottom:"1rem"}}>
-            <div style={{fontSize:12,fontWeight:500,color:"var(--color-text-secondary)",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:10}}>Log {TYPE_LABELS[activeType]} — enter student number</div>
-            <div style={{display:"flex",gap:8}}>
-              <input ref={inputRef} type="text" value={input} onChange={e => handleEntry(e.target.value)} onKeyDown={e => { if(e.key==="Enter"&&match) logEntry(); }} placeholder="e.g. 44612"
-                style={{flex:1,fontSize:18,padding:"10px 14px",borderRadius:"var(--border-radius-md)",border:"2px solid "+(match?TYPE_COLORS[activeType]:"var(--color-border-secondary)"),background:"var(--color-background-primary)",color:"var(--color-text-primary)",outline:"none"}} autoFocus />
-              <button onClick={logEntry} disabled={!match} style={{padding:"10px 22px",borderRadius:"var(--border-radius-md)",border:"none",background:match?TYPE_COLORS[activeType]:"var(--color-background-secondary)",color:match?"#fff":"var(--color-text-tertiary)",cursor:match?"pointer":"not-allowed",fontSize:14,fontWeight:500}}>Log</button>
-            </div>
-            {match && (
-              <div style={{marginTop:12,padding:"12px 16px",borderRadius:"var(--border-radius-md)",background:gl(match.grade),border:"1.5px solid "+gc(match.grade)+"40",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                <div>
-                  <div style={{fontWeight:500,fontSize:15,color:gc(match.grade)}}>{match.name}</div>
-                  <div style={{fontSize:12,color:gc(match.grade),opacity:0.75,marginTop:2}}>Grade {match.grade} · {match.hr} · #{match.num}</div>
-                </div>
-                <div style={{display:"flex",gap:10}}>
-                  {TYPES.map(t => (
-                    <div key={t} style={{textAlign:"center"}}>
-                      <div style={{fontSize:16,fontWeight:500,color:TYPE_COLORS[t]}}>{yearCount(t,match.num)}</div>
-                      <div style={{fontSize:9,color:"var(--color-text-tertiary)"}}>{t==="id"?"ID":t==="uniform"?"Unif.":"Pouch"}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {flash && <div style={{marginTop:10,padding:"8px 14px",borderRadius:"var(--border-radius-md)",background:"var(--color-background-success)",border:"0.5px solid var(--color-border-success)",fontSize:13,color:"var(--color-text-success)"}}>Logged: {flash}</div>}
-          </div>
-
-          <div style={{fontSize:13,fontWeight:500,color:"var(--color-text-secondary)",marginBottom:8}}>Today's {TYPE_LABELS[activeType]} log — {todayLog.length} {todayLog.length===1?"student":"students"}</div>
-          {todayLog.length===0 ? (
-            <div style={{padding:"1.5rem",textAlign:"center",border:"0.5px dashed var(--color-border-tertiary)",borderRadius:"var(--border-radius-lg)",color:"var(--color-text-tertiary)",fontSize:13}}>No entries yet. Start logging above.</div>
-          ) : (
-            <div style={{display:"flex",flexDirection:"column",gap:6}}>
-              {[...todayLog].reverse().map(i => (
-                <div key={i.id} style={{background:"var(--color-background-primary)",border:"0.5px solid var(--color-border-tertiary)",borderRadius:"var(--border-radius-md)",padding:"10px 14px",display:"flex",alignItems:"center",gap:12}}>
-                  <div style={{width:32,height:32,borderRadius:8,background:gl(i.grade),display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:500,color:gc(i.grade),flexShrink:0}}>G{i.grade}</div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:14,fontWeight:500,color:"var(--color-text-primary)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{i.name}</div>
-                    <div style={{fontSize:12,color:"var(--color-text-secondary)"}}>#{i.num} · {i.hr} · {i.time}</div>
-                  </div>
-                  <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                    {TYPES.map(t => (
-                      <div key={t} style={{textAlign:"center",minWidth:28}}>
-                        <div style={{fontSize:14,fontWeight:500,color:yearCount(t,i.num)>=3?"#A32D2D":yearCount(t,i.num)>=2?"#854F0B":TYPE_COLORS[t]}}>{yearCount(t,i.num)}</div>
-                        <div style={{fontSize:9,color:"var(--color-text-tertiary)"}}>{t==="id"?"ID":t==="uniform"?"Uni":"Pch"}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <button onClick={() => remove(activeType,today,i.id)} style={{width:28,height:28,borderRadius:6,border:"0.5px solid var(--color-border-tertiary)",background:"transparent",color:"var(--color-text-tertiary)",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* HISTORY VIEW */}
-      {view==="history" && (
-        <div>
-          {allDates.length===0 ? (
-            <div style={{padding:"2rem",textAlign:"center",color:"var(--color-text-tertiary)",fontSize:13}}>No history yet for {TYPE_LABELS[activeType]}.</div>
-          ) : allDates.map(date => (
-            <div key={date} style={{marginBottom:"1.5rem"}}>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-                <div style={{fontSize:13,fontWeight:500,color:"var(--color-text-primary)"}}>{fmt(date)}</div>
-                <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                  {GRADES.map(g => { const n=(logs[activeType][date]||[]).filter(x=>x.grade===g).length; return n>0?<span key={g} style={{fontSize:11,padding:"2px 8px",borderRadius:99,background:gl(g),color:gc(g),fontWeight:500}}>G{g}: {n}</span>:null; })}
-                  <span style={{fontSize:11,padding:"2px 8px",borderRadius:99,background:"var(--color-background-secondary)",color:"var(--color-text-secondary)"}}>{(logs[activeType][date]||[]).length} total</span>
-                </div>
-              </div>
-              <div style={{display:"flex",flexDirection:"column",gap:5}}>
-                {(logs[activeType][date]||[]).map(i => (
-                  <div key={i.id} style={{background:"var(--color-background-primary)",border:"0.5px solid var(--color-border-tertiary)",borderRadius:"var(--border-radius-md)",padding:"9px 12px",display:"flex",alignItems:"center",gap:10}}>
-                    <div style={{width:28,height:28,borderRadius:6,background:gl(i.grade),display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:500,color:gc(i.grade),flexShrink:0}}>G{i.grade}</div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:13,fontWeight:500,color:"var(--color-text-primary)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{i.name}</div>
-                      <div style={{fontSize:11,color:"var(--color-text-secondary)"}}>#{i.num} · {i.hr}{i.time?" · "+i.time:""}</div>
-                    </div>
-                    <span style={{fontSize:13,fontWeight:500,color:yearCount(activeType,i.num)>=3?"#A32D2D":yearCount(activeType,i.num)>=2?"#854F0B":TYPE_COLORS[activeType],minWidth:24,textAlign:"center"}}>{yearCount(activeType,i.num)}×</span>
-                    <button onClick={() => remove(activeType,date,i.id)} style={{width:26,height:26,borderRadius:6,border:"0.5px solid var(--color-border-tertiary)",background:"transparent",color:"var(--color-text-tertiary)",cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* SEARCH VIEW */}
-      {view==="search" && (
-        <div>
-          <div style={{background:"var(--color-background-primary)",border:"0.5px solid var(--color-border-tertiary)",borderRadius:"var(--border-radius-lg)",padding:"1.25rem",marginBottom:"1rem"}}>
-            <div style={{fontSize:12,fontWeight:500,color:"var(--color-text-secondary)",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:10}}>Search by student number</div>
-            <div style={{display:"flex",gap:8}}>
-              <input type="text" value={searchNum} onChange={e => { setSearchNum(e.target.value); setSearchResult(null); }} onKeyDown={e => { if(e.key==="Enter") doSearch(); }} placeholder="Enter student number"
-                style={{flex:1,fontSize:16,padding:"10px 14px",borderRadius:"var(--border-radius-md)",border:"0.5px solid var(--color-border-secondary)",background:"var(--color-background-primary)",color:"var(--color-text-primary)"}} />
-              <button onClick={doSearch} style={{padding:"10px 20px",borderRadius:"var(--border-radius-md)",border:"none",background:"#185FA5",color:"#fff",cursor:"pointer",fontSize:14,fontWeight:500}}>Search</button>
-            </div>
-          </div>
-
-          {searchResult==="notfound" && <div style={{padding:"1rem",borderRadius:"var(--border-radius-md)",background:"var(--color-background-danger)",border:"0.5px solid var(--color-border-danger)",color:"var(--color-text-danger)",fontSize:13}}>Student number not found.</div>}
-          {searchResult && searchResult!=="notfound" && (
-            <div>
-              <div style={{background:"var(--color-background-primary)",border:"0.5px solid var(--color-border-tertiary)",borderRadius:"var(--border-radius-lg)",padding:"1.25rem",marginBottom:"1rem"}}>
-                <div style={{fontSize:16,fontWeight:500,color:"var(--color-text-primary)",marginBottom:3}}>{searchResult.student.name}</div>
-                <div style={{fontSize:13,color:"var(--color-text-secondary)",marginBottom:14}}>Grade {searchResult.student.grade} · {searchResult.student.hr} · #{searchResult.student.num}</div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
-                  {TYPES.map(t => (
-                    <div key={t} style={{background:TYPE_LIGHT[t],borderRadius:"var(--border-radius-md)",padding:"10px",textAlign:"center"}}>
-                      <div style={{fontSize:24,fontWeight:500,color:TYPE_COLORS[t],lineHeight:1}}>{searchResult.counts[t]}</div>
-                      <div style={{fontSize:11,color:TYPE_COLORS[t],opacity:0.8,marginTop:3}}>{TYPE_LABELS[t]}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div style={{fontSize:13,fontWeight:500,color:"var(--color-text-secondary)",marginBottom:8}}>All entries — {searchResult.history.length} total</div>
-              {searchResult.history.length===0 ? (
-                <div style={{padding:"1rem",borderRadius:"var(--border-radius-md)",background:"var(--color-background-secondary)",color:"var(--color-text-tertiary)",fontSize:13,textAlign:"center"}}>No entries logged for this student.</div>
-              ) : (
-                <div style={{display:"flex",flexDirection:"column",gap:5}}>
-                  {searchResult.history.map((h,idx) => (
-                    <div key={idx} style={{background:"var(--color-background-primary)",border:"0.5px solid var(--color-border-tertiary)",borderRadius:"var(--border-radius-md)",padding:"9px 14px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                      <div style={{fontSize:13,color:"var(--color-text-primary)",fontWeight:500}}>{fmt(h.date)}</div>
-                      <div style={{display:"flex",alignItems:"center",gap:10}}>
-                        <span style={{fontSize:11,padding:"2px 10px",borderRadius:99,background:TYPE_LIGHT[h.type],color:TYPE_COLORS[h.type],fontWeight:500}}>{TYPE_LABELS[h.type]}</span>
-                        <span style={{fontSize:12,color:"var(--color-text-secondary)"}}>{h.time||"—"}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* EXPORT VIEW */}
-      {view==="export" && (
-        <div style={{display:"flex",flexDirection:"column",gap:10}}>
-          {/* Whole school */}
-          <div style={{background:"var(--color-background-primary)",border:"0.5px solid var(--color-border-tertiary)",borderRadius:"var(--border-radius-lg)",padding:"1.25rem"}}>
-            <div style={{fontSize:15,fontWeight:500,marginBottom:4,color:"var(--color-text-primary)"}}>Whole-school report</div>
-            <div style={{fontSize:13,color:"var(--color-text-secondary)",marginBottom:16}}>Filter by compliance type, date range, and grade level.</div>
-
-            <div style={{marginBottom:14}}>
-              <div style={{fontSize:11,fontWeight:500,color:"var(--color-text-secondary)",textTransform:"uppercase",letterSpacing:"0.04em",marginBottom:8}}>Compliance type</div>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                <button onClick={toggleAllTypes} style={{padding:"5px 14px",borderRadius:99,border:"1.5px solid "+(expTypes.length===3?"#185FA5":"var(--color-border-tertiary)"),background:expTypes.length===3?"#E6F1FB":"transparent",color:expTypes.length===3?"#185FA5":"var(--color-text-secondary)",cursor:"pointer",fontSize:12,fontWeight:expTypes.length===3?500:400}}>All</button>
-                {TYPES.map(t => (
-                  <button key={t} onClick={() => toggleType(t)} style={{padding:"5px 14px",borderRadius:99,border:"1.5px solid "+(expTypes.includes(t)?TYPE_COLORS[t]:"var(--color-border-tertiary)"),background:expTypes.includes(t)?TYPE_LIGHT[t]:"transparent",color:expTypes.includes(t)?TYPE_COLORS[t]:"var(--color-text-secondary)",cursor:"pointer",fontSize:12,fontWeight:expTypes.includes(t)?500:400}}>{TYPE_LABELS[t]}</button>
-                ))}
-              </div>
-            </div>
-
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
-              <div>
-                <div style={{fontSize:11,fontWeight:500,color:"var(--color-text-secondary)",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.04em"}}>From</div>
-                <input type="date" value={expFrom} onChange={e => setExpFrom(e.target.value)} style={{width:"100%",fontSize:13,padding:"7px 10px",borderRadius:"var(--border-radius-md)",border:"0.5px solid var(--color-border-secondary)",background:"var(--color-background-primary)",color:"var(--color-text-primary)",boxSizing:"border-box"}} />
-              </div>
-              <div>
-                <div style={{fontSize:11,fontWeight:500,color:"var(--color-text-secondary)",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.04em"}}>To</div>
-                <input type="date" value={expTo} onChange={e => setExpTo(e.target.value)} style={{width:"100%",fontSize:13,padding:"7px 10px",borderRadius:"var(--border-radius-md)",border:"0.5px solid var(--color-border-secondary)",background:"var(--color-background-primary)",color:"var(--color-text-primary)",boxSizing:"border-box"}} />
-              </div>
-            </div>
-
-            <div style={{marginBottom:14}}>
-              <div style={{fontSize:11,fontWeight:500,color:"var(--color-text-secondary)",textTransform:"uppercase",letterSpacing:"0.04em",marginBottom:8}}>Grade levels</div>
-              <div style={{display:"flex",gap:8}}>
-                {GRADES.map(g => (
-                  <button key={g} onClick={() => toggleGrade(g)} style={{padding:"6px 16px",borderRadius:99,border:"1.5px solid "+(expGrades.includes(g)?gc(g):"var(--color-border-tertiary)"),background:expGrades.includes(g)?gl(g):"transparent",color:expGrades.includes(g)?gc(g):"var(--color-text-secondary)",cursor:"pointer",fontSize:13,fontWeight:expGrades.includes(g)?500:400}}>Grade {g}</button>
-                ))}
-              </div>
-            </div>
-
-            <div style={{padding:"10px 14px",borderRadius:"var(--border-radius-md)",background:"var(--color-background-secondary)",marginBottom:14,fontSize:13,color:"var(--color-text-secondary)"}}>
-              {getFiltered().length} entries match your filters
-            </div>
-            <button onClick={exportFiltered} disabled={getFiltered().length===0} style={{padding:"10px 20px",borderRadius:"var(--border-radius-md)",border:"none",background:getFiltered().length>0?"#185FA5":"var(--color-background-secondary)",color:getFiltered().length>0?"#fff":"var(--color-text-tertiary)",cursor:getFiltered().length>0?"pointer":"not-allowed",fontSize:14,fontWeight:500}}>
-              Download report (CSV) ↓
-            </button>
-          </div>
-
-          {/* Individual student */}
-          <div style={{background:"var(--color-background-primary)",border:"0.5px solid var(--color-border-tertiary)",borderRadius:"var(--border-radius-lg)",padding:"1.25rem"}}>
-            <div style={{fontSize:15,fontWeight:500,marginBottom:4,color:"var(--color-text-primary)"}}>Individual student report</div>
-            <div style={{fontSize:13,color:"var(--color-text-secondary)",marginBottom:14}}>Export a student's full compliance history across all three categories.</div>
-            <div style={{display:"flex",gap:8,marginBottom:12}}>
-              <input type="text" value={expStudentNum} onChange={e => { setExpStudentNum(e.target.value); setExpStudentResult(null); }} onKeyDown={e => { if(e.key==="Enter") findExpStudent(); }} placeholder="Student number"
-                style={{flex:1,fontSize:15,padding:"9px 12px",borderRadius:"var(--border-radius-md)",border:"0.5px solid var(--color-border-secondary)",background:"var(--color-background-primary)",color:"var(--color-text-primary)"}} />
-              <button onClick={findExpStudent} style={{padding:"9px 18px",borderRadius:"var(--border-radius-md)",border:"0.5px solid var(--color-border-secondary)",background:"var(--color-background-secondary)",color:"var(--color-text-primary)",cursor:"pointer",fontSize:14,fontWeight:500}}>Find</button>
-            </div>
-            {expStudentResult==="notfound" && <div style={{fontSize:13,color:"var(--color-text-danger)"}}>Student not found.</div>}
-            {expStudentResult && expStudentResult!=="notfound" && (
-              <div style={{padding:"12px 14px",borderRadius:"var(--border-radius-md)",background:"var(--color-background-secondary)",border:"0.5px solid var(--color-border-tertiary)"}}>
-                <div style={{fontSize:14,fontWeight:500,color:"var(--color-text-primary)",marginBottom:2}}>{expStudentResult.student.name}</div>
-                <div style={{fontSize:12,color:"var(--color-text-secondary)",marginBottom:10}}>Grade {expStudentResult.student.grade} · #{expStudentResult.student.num}</div>
-                <div style={{display:"flex",gap:8,marginBottom:12}}>
-                  {TYPES.map(t => (
-                    <div key={t} style={{flex:1,textAlign:"center",background:TYPE_LIGHT[t],borderRadius:"var(--border-radius-md)",padding:"6px"}}>
-                      <div style={{fontSize:18,fontWeight:500,color:TYPE_COLORS[t]}}>{expStudentResult.counts[t]}</div>
-                      <div style={{fontSize:10,color:TYPE_COLORS[t],opacity:0.8}}>{t==="id"?"ID":t==="uniform"?"Unif.":"Pouch"}</div>
-                    </div>
-                  ))}
-                </div>
-                <button onClick={exportStudentReport} style={{padding:"8px 16px",borderRadius:"var(--border-radius-md)",border:"none",background:"#185FA5",color:"#fff",cursor:"pointer",fontSize:13,fontWeight:500}}>Export this student (CSV) ↓</button>
-              </div>
-            )}
-          </div>
-
-          {/* Summary */}
-          <div style={{background:"var(--color-background-secondary)",borderRadius:"var(--border-radius-md)",padding:"1rem",fontSize:13}}>
-            <div style={{fontWeight:500,marginBottom:8,color:"var(--color-text-primary)"}}>Year to date</div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
-              {TYPES.map(t => (
-                <div key={t} style={{textAlign:"center"}}>
-                  <div style={{fontSize:20,fontWeight:500,color:TYPE_COLORS[t]}}>{Object.values(logs[t]).flat().length}</div>
-                  <div style={{fontSize:11,color:"var(--color-text-secondary)",marginTop:2}}>{TYPE_LABELS[t]}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+function checkPin() {
+  const val = document.getElementById("pin-input").value;
+  if(val === CORRECT_PIN) {
+    document.getElementById("pin-screen").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    init();
+  } else {
+    document.getElementById("pin-error").textContent = "Incorrect PIN. Try again.";
+    document.getElementById("pin-input").value = "";
+  }
 }
+document.getElementById("pin-input").addEventListener("keydown", e => { if(e.key==="Enter") checkPin(); });
+
+function init() {
+  document.getElementById("today-label").textContent = new Date().toLocaleDateString("en-AE",{weekday:"long",day:"numeric",month:"long",year:"numeric"}) + " · Middle school";
+  try { const s = localStorage.getItem(STORAGE_KEY); if(s) logs = JSON.parse(s); } catch(e) {}
+  buildTypeTabs(); buildHistTypeTabs(); buildExpTypePills(); buildExpGradePills(); renderAll();
+}
+
+function persist() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(logs)); } catch(e) {} }
+function yearCount(type, num) { return Object.values(logs[type]).flat().filter(i=>i.num===num).length; }
+
+function renderAll() {
+  renderSummary(); renderTodayLog(); renderHistory(); renderExportCount(); renderYTD();
+}
+
+function renderSummary() {
+  const t = today();
+  document.getElementById("summary-grid").innerHTML = TYPES.map(tp => {
+    const n = (logs[tp][t]||[]).length;
+    const isActive = activeType===tp && currentView==="log";
+    return `<div class="summary-card" onclick="switchType('${tp}')" style="border-top-color:${TYPE_COLORS[tp]};${isActive?`background:${TYPE_LIGHT[tp]};border-color:${TYPE_COLORS[tp]}44`:""}">
+      <div class="val" style="color:${TYPE_COLORS[tp]}">${n}</div>
+      <div class="lbl">${TYPE_LABELS[tp]}</div>
+      <div class="sub">today</div>
+    </div>`;
+  }).join("");
+}
+
+function buildTypeTabs() {
+  document.getElementById("type-tabs").innerHTML = TYPES.map(t =>
+    `<button class="type-tab" onclick="switchType('${t}')" style="${t===activeType?`border-color:${TYPE_COLORS[t]};background:${TYPE_LIGHT[t]};color:${TYPE_COLORS[t]};font-weight:500`:""}">${TYPE_LABELS[t]}</button>`
+  ).join("");
+}
+
+function buildHistTypeTabs() {
+  document.getElementById("hist-type-tabs").innerHTML = TYPES.map(t =>
+    `<button class="type-tab" onclick="switchType('${t}')" style="${t===activeType?`border-color:${TYPE_COLORS[t]};background:${TYPE_LIGHT[t]};color:${TYPE_COLORS[t]};font-weight:500`:""}">${TYPE_LABELS[t]}</button>`
+  ).join("");
+}
+
+function switchType(t) {
+  activeType = t;
+  buildTypeTabs(); buildHistTypeTabs();
+  document.getElementById("log-label").textContent = `Log ${TYPE_LABELS[t]} — enter student number`;
+  renderSummary(); renderTodayLog(); renderHistory(); updateLogBtn();
+}
+
+function handleInput(v) {
+  currentMatch = null; updateLogBtn();
+  document.getElementById("match-preview").innerHTML = "";
+  if(v.trim().length >= 4) {
+    const s = studentMap[v.trim()];
+    if(s) { currentMatch = s; showPreview(s); updateLogBtn(); }
+  }
+}
+
+function showPreview(s) {
+  const counts = TYPES.map(t => `<div class="count-box"><div class="n" style="color:${TYPE_COLORS[t]}">${yearCount(t,s.num)}</div><div class="t">${t==="id"?"ID":t==="uniform"?"Uni":"Pch"}</div></div>`).join("");
+  document.getElementById("match-preview").innerHTML = `
+    <div class="match-preview" style="background:${gl(s.grade)};border:1.5px solid ${gc(s.grade)}40">
+      <div>
+        <div style="font-weight:500;font-size:16px;color:${gc(s.grade)}">#${s.num}</div>
+        <div style="font-size:12px;color:${gc(s.grade)};opacity:0.75;margin-top:2px">Grade ${s.grade} · Student found</div>
+      </div>
+      <div class="counts-row">${counts}</div>
+    </div>`;
+}
+
+function updateLogBtn() {
+  const btn = document.getElementById("log-btn");
+  const inp = document.getElementById("student-input");
+  if(currentMatch) {
+    btn.className = "log-btn active"; btn.style.background = TYPE_COLORS[activeType]; inp.style.borderColor = TYPE_COLORS[activeType];
+  } else {
+    btn.className = "log-btn"; btn.style.background = "#ccc"; inp.style.borderColor = "#ddd";
+  }
+}
+
+function logEntry() {
+  if(!currentMatch) return;
+  const s = currentMatch;
+  const time = new Date().toLocaleTimeString("en-AE",{hour:"2-digit",minute:"2-digit"});
+  const t = today();
+  if(!logs[activeType][t]) logs[activeType][t] = [];
+  logs[activeType][t].push({...s, time, id: Date.now()});
+  persist();
+  document.getElementById("student-input").value = "";
+  currentMatch = null;
+  document.getElementById("match-preview").innerHTML = "";
+  updateLogBtn();
+  showFlash(s.num);
+  renderAll();
+}
+
+function showFlash(num) {
+  const el = document.getElementById("flash");
+  el.innerHTML = `<div class="flash">Logged: #${num}</div>`;
+  if(flashTimer) clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => { el.innerHTML = ""; }, 2000);
+}
+
+function removeEntry(type, date, id) {
+  logs[type][date] = logs[type][date].filter(i => i.id !== id);
+  if(!logs[type][date].length) delete logs[type][date];
+  persist(); renderAll();
+}
+
+function renderTodayLog() {
+  const t = today();
+  const items = [...(logs[activeType][t]||[])].reverse();
+  document.getElementById("today-log-label").textContent = `Today's ${TYPE_LABELS[activeType]} log — ${items.length} ${items.length===1?"student":"students"}`;
+  if(!items.length) { document.getElementById("today-log-list").innerHTML = `<div class="empty">No entries yet. Start logging above.</div>`; return; }
+  document.getElementById("today-log-list").innerHTML = `<div class="log-list">${items.map(i => {
+    const counts = TYPES.map(tp => `<div class="count-box"><div class="n" style="color:${yearCount(tp,i.num)>=3?"#A32D2D":yearCount(tp,i.num)>=2?"#854F0B":TYPE_COLORS[tp]}">${yearCount(tp,i.num)}</div><div class="t">${tp==="id"?"ID":tp==="uniform"?"Uni":"Pch"}</div></div>`).join("");
+    return `<div class="log-item">
+      <div class="grade-badge" style="background:${gl(i.grade)};color:${gc(i.grade)}">G${i.grade}</div>
+      <div style="flex:1;min-width:0"><div class="item-id">#${i.num}</div><div class="item-sub">Grade ${i.grade} · ${i.time}</div></div>
+      <div class="item-counts">${counts}</div>
+      <button class="rm-btn" onclick="removeEntry('${activeType}','${today()}',${i.id})">×</button>
+    </div>`;
+  }).join("")}</div>`;
+}
+
+function renderHistory() {
+  const dates = Object.keys(logs[activeType]).sort((a,b)=>b.localeCompare(a));
+  if(!dates.length) { document.getElementById("history-list").innerHTML = `<div class="empty">No history yet for ${TYPE_LABELS[activeType]}.</div>`; return; }
+  document.getElementById("history-list").innerHTML = dates.map(date => {
+    const items = logs[activeType][date]||[];
+    const gradeBadges = ["6","7","8"].map(g=>{const n=items.filter(x=>x.grade===g).length;return n?`<span class="badge" style="background:${gl(g)};color:${gc(g)}">G${g}: ${n}</span>`:""}).join("");
+    const rows = items.map(i => `<div class="log-item">
+      <div class="grade-badge" style="background:${gl(i.grade)};color:${gc(i.grade)}">G${i.grade}</div>
+      <div style="flex:1;min-width:0"><div class="item-id">#${i.num}</div><div class="item-sub">Grade ${i.grade}${i.time?" · "+i.time:""}</div></div>
+      <span style="font-size:13px;font-weight:500;color:${yearCount(activeType,i.num)>=3?"#A32D2D":yearCount(activeType,i.num)>=2?"#854F0B":TYPE_COLORS[activeType]};min-width:24px;text-align:center">${yearCount(activeType,i.num)}×</span>
+      <button class="rm-btn" onclick="removeEntry('${activeType}','${date}',${i.id})">×</button>
+    </div>`).join("");
+    return `<div class="history-day">
+      <div class="history-day-header"><div class="history-day-title">${fmt(date)}</div><div class="badge-row">${gradeBadges}<span class="badge" style="background:#f5f5f0;color:#888">${items.length} total</span></div></div>
+      <div class="log-list">${rows}</div>
+    </div>`;
+  }).join("");
+}
+
+function doSearch() {
+  const num = document.getElementById("search-input").value.trim();
+  const s = studentMap[num];
+  if(!s) { document.getElementById("search-result").innerHTML = `<div class="error-box">Student number not found.</div>`; return; }
+  const history = [];
+  TYPES.forEach(t => Object.entries(logs[t]).forEach(([d,arr]) => arr.filter(i=>i.num===s.num).forEach(i=>history.push({...i,date:d,type:t}))));
+  history.sort((a,b)=>b.date.localeCompare(a.date));
+  const counts = {id:yearCount("id",s.num),uniform:yearCount("uniform",s.num),pouch:yearCount("pouch",s.num)};
+  const typeCounts = TYPES.map(t=>`<div class="type-count-box" style="background:${TYPE_LIGHT[t]}"><div class="n" style="color:${TYPE_COLORS[t]}">${counts[t]}</div><div class="l" style="color:${TYPE_COLORS[t]}">${TYPE_LABELS[t]}</div></div>`).join("");
+  const histRows = history.length ? history.map(h=>`<div class="history-entry"><div style="font-size:13px;font-weight:500">${fmt(h.date)}</div><div style="display:flex;align-items:center;gap:10px"><span class="type-pill" style="background:${TYPE_LIGHT[h.type]};color:${TYPE_COLORS[h.type]}">${TYPE_LABELS[h.type]}</span><span style="font-size:12px;color:#888">${h.time||"—"}</span></div></div>`).join("") : `<div class="empty">No entries logged for this student.</div>`;
+  document.getElementById("search-result").innerHTML = `
+    <div class="search-result-card">
+      <div style="font-size:18px;font-weight:500">#${s.num}</div>
+      <div style="font-size:13px;color:#888;margin-top:3px">Grade ${s.grade}</div>
+      <div class="type-counts">${typeCounts}</div>
+    </div>
+    <div style="font-size:13px;font-weight:500;color:#888;margin-bottom:8px">All entries — ${history.length} total</div>
+    ${histRows}`;
+}
+
+function buildExpTypePills() {
+  document.getElementById("exp-type-pills").innerHTML =
+    `<button class="pill-btn" onclick="toggleAllTypes()" style="border-color:${expTypes.length===3?"#185FA5":"#ddd"};background:${expTypes.length===3?"#E6F1FB":"transparent"};color:${expTypes.length===3?"#185FA5":"#888"}">All</button>` +
+    TYPES.map(t=>`<button class="pill-btn" onclick="toggleType('${t}')" style="border-color:${expTypes.includes(t)?TYPE_COLORS[t]:"#ddd"};background:${expTypes.includes(t)?TYPE_LIGHT[t]:"transparent"};color:${expTypes.includes(t)?TYPE_COLORS[t]:"#888"}">${TYPE_LABELS[t]}</button>`).join("");
+}
+
+function buildExpGradePills() {
+  document.getElementById("exp-grade-pills").innerHTML = ["6","7","8"].map(g=>
+    `<button class="pill-btn" onclick="toggleGrade('${g}')" style="border-color:${expGrades.includes(g)?gc(g):"#ddd"};background:${expGrades.includes(g)?gl(g):"transparent"};color:${expGrades.includes(g)?gc(g):"#888"};font-size:13px">Grade ${g}</button>`
+  ).join("");
+}
+
+function toggleAllTypes() { expTypes = expTypes.length===3?[]:["id","uniform","pouch"]; buildExpTypePills(); renderExportCount(); }
+function toggleType(t) { expTypes = expTypes.includes(t)?expTypes.filter(x=>x!==t):[...expTypes,t]; buildExpTypePills(); renderExportCount(); }
+function toggleGrade(g) { expGrades = expGrades.includes(g)?expGrades.filter(x=>x!==g):[...expGrades,g]; buildExpGradePills(); renderExportCount(); }
+
+function getFiltered() {
+  const from = document.getElementById("exp-from").value||"";
+  const to = document.getElementById("exp-to").value||"";
+  const rows = [];
+  expTypes.forEach(t => Object.entries(logs[t]).forEach(([d,arr]) => {
+    if(from && d<from) return; if(to && d>to) return;
+    arr.filter(i=>expGrades.includes(i.grade)).forEach(i=>rows.push({...i,date:d,type:t}));
+  }));
+  return rows.sort((a,b)=>a.date.localeCompare(b.date));
+}
+
+function renderExportCount() {
+  const n = getFiltered().length;
+  const el = document.getElementById("exp-count"); const btn = document.getElementById("dl-btn");
+  if(el) el.textContent = `${n} entries match your filters`;
+  if(btn) { btn.disabled = n===0; btn.style.background = n>0?"#185FA5":"#ddd"; }
+}
+
+function exportFiltered() {
+  const rows = [["Date","Time","Compliance Type","Student Number","Grade","Total Count (Year)"]];
+  getFiltered().forEach(i=>rows.push([i.date,i.time||"",TYPE_LABELS[i.type],i.num,"Grade "+i.grade,yearCount(i.type,i.num)]));
+  dl(rows,"AISA_Compliance_Report");
+}
+
+function findExpStudent() {
+  const num = document.getElementById("exp-student-input").value.trim();
+  const s = studentMap[num];
+  if(!s) { document.getElementById("exp-student-result").innerHTML=`<div style="font-size:13px;color:#A32D2D">Student not found.</div>`; return; }
+  const history=[];
+  TYPES.forEach(t=>Object.entries(logs[t]).forEach(([d,arr])=>arr.filter(i=>i.num===s.num).forEach(i=>history.push({...i,date:d,type:t}))));
+  history.sort((a,b)=>a.date.localeCompare(b.date));
+  const counts={id:yearCount("id",s.num),uniform:yearCount("uniform",s.num),pouch:yearCount("pouch",s.num)};
+  const total=counts.id+counts.uniform+counts.pouch;
+  const typeCols=TYPES.map(t=>`<div style="flex:1;text-align:center;background:${TYPE_LIGHT[t]};border-radius:8px;padding:6px"><div style="font-size:18px;font-weight:500;color:${TYPE_COLORS[t]}">${counts[t]}</div><div style="font-size:10px;color:${TYPE_COLORS[t]};opacity:0.8">${t==="id"?"ID":t==="uniform"?"Unif.":"Pouch"}</div></div>`).join("");
+  document.getElementById("exp-student-result").innerHTML=`
+    <div class="find-result">
+      <div style="font-size:15px;font-weight:500;margin-bottom:2px">#${s.num}</div>
+      <div style="font-size:12px;color:#888;margin-bottom:10px">Grade ${s.grade} · ${total} total entries</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">${typeCols}</div>
+      <button class="dl-btn" onclick="exportStudentReport()" style="font-size:13px;padding:8px 16px">Export this student (CSV) ↓</button>
+    </div>`;
+  window._expStudent={s,history,counts};
+}
+
+function exportStudentReport() {
+  if(!window._expStudent) return;
+  const {s,history,counts}=window._expStudent;
+  const rows=[["Student Number","Grade"],[s.num,"Grade "+s.grade],[""],
+    ["Compliance Summary"],["Student ID — no ID",counts.id],["Uniform — noncompliance",counts.uniform],["Phone Pouch — missing pouch",counts.pouch],["Total",counts.id+counts.uniform+counts.pouch],[""],
+    ["Date","Time","Compliance Type"]];
+  history.forEach(h=>rows.push([h.date,h.time||"",TYPE_LABELS[h.type]]));
+  dl(rows,"AISA_Student_"+s.num);
+}
+
+function renderYTD() {
+  const el = document.getElementById("ytd-grid");
+  if(el) el.innerHTML = TYPES.map(t=>`<div class="ytd-box"><div class="n" style="color:${TYPE_COLORS[t]}">${Object.values(logs[t]).flat().length}</div><div class="l">${TYPE_LABELS[t]}</div></div>`).join("");
+}
+
+function dl(rows,name) {
+  const csv=rows.map(r=>r.map(c=>'"'+String(c||"").replace(/"/g,'""')+'"').join(",")).join("\n");
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=name+".csv"; a.click();
+}
+
+function setView(v) {
+  currentView=v;
+  ["log","history","search","export"].forEach(x=>{ document.getElementById("view-"+x).style.display=x===v?"block":"none"; });
+  document.querySelectorAll(".nav button").forEach((btn,i)=>{ btn.className=["log","history","search","export"][i]===v?"active":""; });
+  if(v==="export"){renderExportCount();renderYTD();}
+  if(v==="history"){renderHistory();}
+}
+
+if("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+</script>
+</body>
+</html>
